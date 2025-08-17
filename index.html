@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Pick-and-Roll Defense Coverage Analysis</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 25px;
+            padding: 40px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+            font-weight: 800;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.3rem;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .stats-banner {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 20px;
+            color: white;
+        }
+        
+        .banner-stat {
+            text-align: center;
+        }
+        
+        .banner-stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .banner-stat-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 40px;
+            background: #f8f9fa;
+            border-radius: 30px;
+            padding: 8px;
+        }
+        
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .tab:not(.active):hover {
+            background: rgba(255,255,255,0.8);
+            transform: translateY(-1px);
+        }
+        
+        .content-section {
+            display: none;
+            animation: fadeInUp 0.6s ease;
+        }
+        
+        .content-section.active {
+            display: block;
+        }
+        
+        .coverage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .coverage-card {
+            background: #fff;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid transparent;
+        }
+        
+        .coverage-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: var(--card-gradient);
+        }
+        
+        .coverage-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+        
+        .coverage-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .coverage-emoji {
+            font-size: 2rem;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        .effectiveness-section {
+            margin-bottom: 25px;
+        }
+        
+        .effectiveness-meter {
+            width: 100%;
+            height: 25px;
+            background: #ecf0f1;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .effectiveness-fill {
+            height: 100%;
+            border-radius: 15px;
+            transition: width 1.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .effectiveness-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 25%, rgba(255,255,255,0.3) 50%, transparent 75%);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px 10px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            transition: transform 0.2s ease;
+        }
+        
+        .stat-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+        
+        .personnel-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f1f2f6, #ddd6fe);
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .personnel-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .personnel-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .personnel-list li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+            color: #34495e;
+        }
+        
+        .personnel-list li::before {
+            content: '⚡';
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        .chart-container {
+            margin: 40px 0;
+            background: white;
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #2c3e50;
+            position: relative;
+        }
+        
+        .chart-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+        
+        .advanced-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .metric-label {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        .heatmap-section {
+            margin: 40px 0;
+        }
+        
+        .heatmap-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin: 30px 0 15px 0;
+            color: #2c3e50;
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+        }
+        
+        .heatmap {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+        
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .heatmap-cell::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .heatmap-cell:hover {
+            transform: scale(1.1) rotate(3deg);
+            z-index: 10;
+        }
+        
+        .heatmap-cell:hover::before {
+            opacity: 1;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 25px 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 15px;
+            font-weight: 500;
+        }
+        
+        .legend-colors {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .comparison-table {
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin: 30px 0;
+        }
+        
+        .comparison-table th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #f1f2f6;
+            transition: background-color 0.2s ease;
+        }
+        
+        .comparison-table tr:hover td {
+            background-color: #f8f9fa;
+        }
+        
+        .situational-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .situation-card {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .situation-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .situation-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .situation-coverage {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .situation-effectiveness {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .interactive-element {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .interactive-element:hover {
+            transform: scale(1.05);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .coverage-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .heatmap {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏀 Advanced Pick-and-Roll Defense Analysis</h1>
+            <p>Comprehensive breakdown of 8 defensive coverages with advanced analytics, effectiveness metrics, personnel requirements, and situational applications</p>
+        </div>
+        
+        <div class="stats-banner">
+            <div class="banner-stat">
+                <div class="banner-stat-value">8</div>
+                <div class="banner-stat-label">Coverage Types</div>
+            </div>
+            <div class="banner-stat">
+                <div class="banner-stat-value">15</div>
+                <div class="banner-stat-label">Key Metrics</div>
+            </div>
+            <div class="banner-stat">
+                <div class="banner-stat-value">42%</div>
+                <div class="banner-stat-label">NBA Possessions</div>
+            </div>
+            <div class="banner-stat">
+                <div class="banner-stat-value">±0.23</div>
+                <div class="banner-stat-label">PPP Range</div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('overview')">📊 Overview</div>
+            <div class="tab" onclick="showTab('analytics')">📈 Analytics</div>
+            <div class="tab" onclick="showTab('heatmaps')">🔥 Heat Maps</div>
+            <div class="tab" onclick="showTab('personnel')">👥 Personnel</div>
+            <div class="tab" onclick="showTab('situational')">⚡ Situational</div>
+            <div class="tab" onclick="showTab('comparison')">⚖️ Comparison</div>
+            <div class="tab" onclick="showTab('advanced')">🎯 Advanced</div>
+        </div>
+        
+        <div id="overview" class="content-section active">
+            <div class="coverage-grid">
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #3498db, #2ecc71);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">🔄</span>
+                        Switch Coverage
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 85%; background: linear-gradient(90deg, #3498db, #2ecc71);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.87</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">68%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">8.7%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Chaotic defense coordinators</li>
+                            <li>Multiple switching capabilities</li>
+                            <li>High-energy defensive schemes</li>
+                            <li>Adaptable role players</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Disrupting rhythm, changing looks mid-possession</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #2980b9, #8e44ad);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">🛡️</span>
+                        Under/Through
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 72%; background: linear-gradient(90deg, #2980b9, #8e44ad);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.91</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">22%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">6.3%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Quick navigation under screens</li>
+                            <li>Low stance and flexibility</li>
+                            <li>Good anticipation of screen timing</li>
+                            <li>Strong contest ability after navigation</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Elite shooters, maintaining tight coverage</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="analytics" class="content-section">
+            <div class="advanced-metrics">
+                <div class="metric-card">
+                    <div class="metric-value">0.87</div>
+                    <div class="metric-label">Average PPP Allowed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">9.8%</div>
+                    <div class="metric-label">Average TO Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">42.3%</div>
+                    <div class="metric-label">NBA P&R Frequency</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1.12</div>
+                    <div class="metric-label">Efficiency Rating</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Defensive Effectiveness by Coverage Type</div>
+                <canvas id="effectivenessChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Points Per Possession vs Usage Rate</div>
+                <canvas id="scatterChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Turnover Generation by Coverage</div>
+                <canvas id="turnoverChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Coverage Effectiveness Over Time (2019-2024)</div>
+                <canvas id="timelineChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Shooting Percentage Allowed by Coverage</div>
+                <canvas id="shootingChart"></canvas>
+            </div>
+            </div>
+        </div>
+        
+        <div id="analytics" class="content-section">
+            <div class="advanced-metrics">
+                <div class="metric-card">
+                    <div class="metric-value">0.87</div>
+                    <div class="metric-label">Average PPP Allowed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">9.8%</div>
+                    <div class="metric-label">Average TO Rate</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">42.3%</div>
+                    <div class="metric-label">NBA P&R Frequency</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1.12</div>
+                    <div class="metric-label">Efficiency Rating</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Defensive Effectiveness by Coverage Type</div>
+                <canvas id="effectivenessChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Points Per Possession vs Usage Rate</div>
+                <canvas id="scatterChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Turnover Generation by Coverage</div>
+                <canvas id="turnoverChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Coverage Effectiveness Over Time (2019-2024)</div>
+                <canvas id="timelineChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Shooting Percentage Allowed by Coverage</div>
+                <canvas id="shootingChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="heatmaps" class="content-section">
+            <div class="chart-container">
+                <div class="chart-title">Comprehensive Effectiveness Heat Map Analysis</div>
+                
+                <div class="legend">
+                    <span><strong>Effectiveness Scale:</strong> Low to High</span>
+                    <div class="legend-colors">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <div class="legend-color" style="background: #f39c12;"></div>
+                        <div class="legend-color" style="background: #f1c40f;"></div>
+                        <div class="legend-color" style="background: #27ae60;"></div>
+                        <div class="legend-color" style="background: #16a085;"></div>
+                    </div>
+                    <span><strong>PPP Range:</strong> 0.79 - 1.12</span>
+                </div>
+                
+                <div class="heatmap-title">🎯 vs Elite Ball Handlers (PPP Allowed)</div>
+                <div class="heatmap">
+                    <div class="heatmap-cell" style="background: #16a085;">Ice<br><strong>0.82</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Switch<br><strong>0.85</strong></div>
+                    <div class="heatmap-cell" style="background: #f1c40f;">Show<br><strong>0.88</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Blitz<br><strong>0.90</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Hedge<br><strong>0.94</strong></div>
+                    <div class="heatmap-cell" style="background: #e74c3c;">Drop<br><strong>1.08</strong></div>
+                </div>
+                
+                <div class="heatmap-title">🏹 vs Elite Shooters (PPP Allowed)</div>
+                <div class="heatmap">
+                    <div class="heatmap-cell" style="background: #16a085;">Switch<br><strong>0.83</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Under<br><strong>0.85</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Hedge<br><strong>0.86</strong></div>
+                    <div class="heatmap-cell" style="background: #f1c40f;">Ice<br><strong>0.92</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Blitz<br><strong>0.96</strong></div>
+                    <div class="heatmap-cell" style="background: #e74c3c;">Drop<br><strong>1.12</strong></div>
+                </div>
+                
+                <div class="heatmap-title">⏰ Late Game Situations (PPP Allowed)</div>
+                <div class="heatmap">
+                    <div class="heatmap-cell" style="background: #16a085;">Blitz<br><strong>0.79</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Ice<br><strong>0.84</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Scram<br><strong>0.87</strong></div>
+                    <div class="heatmap-cell" style="background: #f1c40f;">Switch<br><strong>0.91</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Hedge<br><strong>0.95</strong></div>
+                    <div class="heatmap-cell" style="background: #e74c3c;">Drop<br><strong>1.06</strong></div>
+                </div>
+                
+                <div class="heatmap-title">💪 vs Physical Bigs (PPP Allowed)</div>
+                <div class="heatmap">
+                    <div class="heatmap-cell" style="background: #16a085;">Drop<br><strong>0.81</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Hedge<br><strong>0.84</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Show<br><strong>0.86</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Switch<br><strong>0.93</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Ice<br><strong>0.97</strong></div>
+                    <div class="heatmap-cell" style="background: #e74c3c;">Blitz<br><strong>1.04</strong></div>
+                </div>
+                
+                <div class="heatmap-title">🚀 vs Fast Pace Offenses (PPP Allowed)</div>
+                <div class="heatmap">
+                    <div class="heatmap-cell" style="background: #16a085;">Switch<br><strong>0.82</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Ice<br><strong>0.85</strong></div>
+                    <div class="heatmap-cell" style="background: #f1c40f;">Drop<br><strong>0.89</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Show<br><strong>0.92</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Hedge<br><strong>0.96</strong></div>
+                    <div class="heatmap-cell" style="background: #e74c3c;">Blitz<br><strong>1.01</strong></div>
+                </div>
+                
+                <div class="heatmap-title">📍 Court Position Effectiveness</div>
+                <div class="heatmap">
+                    <div class="heatmap-cell" style="background: #16a085;">Top<br><strong>Switch</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Wing<br><strong>Ice</strong></div>
+                    <div class="heatmap-cell" style="background: #27ae60;">Corner<br><strong>Hedge</strong></div>
+                    <div class="heatmap-cell" style="background: #f1c40f;">Elbow<br><strong>Show</strong></div>
+                    <div class="heatmap-cell" style="background: #f39c12;">Baseline<br><strong>Drop</strong></div>
+                    <div class="heatmap-cell" style="background: #e74c3c;">Paint<br><strong>Blitz</strong></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="personnel" class="content-section">
+            <div class="chart-container">
+                <div class="chart-title">Personnel Attribute Requirements by Coverage</div>
+                <canvas id="radarChart"></canvas>
+            </div>
+            
+            <div class="advanced-metrics">
+                <div class="metric-card" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                    <div class="metric-value">Elite</div>
+                    <div class="metric-label">Athletic Demands: Blitz</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                    <div class="metric-value">High</div>
+                    <div class="metric-label">IQ Required: Ice</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #27ae60, #229954);">
+                    <div class="metric-value">Critical</div>
+                    <div class="metric-label">Size Matching: Switch</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                    <div class="metric-value">Essential</div>
+                    <div class="metric-label">Communication: All</div>
+                </div>
+            </div>
+            
+            <div class="coverage-grid">
+                <div class="coverage-card">
+                    <div class="coverage-title">🏃‍♂️ Athletic Requirements Ranking</div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">1st</div>
+                            <div class="stat-label">Blitz/Trap</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">2nd</div>
+                            <div class="stat-label">Scramble</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">3rd</div>
+                            <div class="stat-label">Hedge</div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <p><strong>Key Attributes:</strong> Speed, Agility, Recovery, Stamina</p>
+                        <p><strong>Critical for:</strong> High-intensity defensive schemes</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card">
+                    <div class="coverage-title">🧠 Basketball IQ Requirements</div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">1st</div>
+                            <div class="stat-label">Ice Coverage</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">2nd</div>
+                            <div class="stat-label">Switch</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">3rd</div>
+                            <div class="stat-label">Blitz</div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <p><strong>Key Attributes:</strong> Positioning, Anticipation, Decision Making</p>
+                        <p><strong>Critical for:</strong> Situational awareness and timing</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card">
+                    <div class="coverage-title">💪 Physical Matchup Importance</div>
+                    <div class="stat-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">Critical</div>
+                            <div class="stat-label">Switch</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">High</div>
+                            <div class="stat-label">Drop</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">Moderate</div>
+                            <div class="stat-label">Others</div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <p><strong>Height Differential:</strong> ±6 inches max for switching</p>
+                        <p><strong>Weight/Strength:</strong> Critical vs physical players</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card">
+                    <div class="coverage-title">🎯 Specialization Matrix</div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Guards Specialization:</div>
+                        <ul class="personnel-list">
+                            <li>Switch: Versatile wing defenders</li>
+                            <li>Ice: Disciplined point guards</li>
+                            <li>Under: Quick, low-stance guards</li>
+                        </ul>
+                        <div class="personnel-title">Forwards Specialization:</div>
+                        <ul class="personnel-list">
+                            <li>Switch: Tweener forwards</li>
+                            <li>Hedge: Athletic 4s</li>
+                            <li>Show: Smart role players</li>
+                        </ul>
+                        <div class="personnel-title">Centers Specialization:</div>
+                        <ul class="personnel-list">
+                            <li>Drop: Traditional rim protectors</li>
+                            <li>Hedge: Mobile bigs</li>
+                            <li>Switch: Modern stretch 5s</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="situational" class="content-section">
+            <div class="chart-container">
+                <div class="chart-title">Situational Coverage Recommendations</div>
+                
+                <div class="situational-grid">
+                    <div class="situation-card" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                        <div class="situation-title">🔥 Late Game (Last 2 Min)</div>
+                        <div class="situation-coverage">BLITZ</div>
+                        <div class="situation-effectiveness">0.79 PPP | 22% TO Rate</div>
+                    </div>
+                    
+                    <div class="situation-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                        <div class="situation-title">❄️ Sideline Screens</div>
+                        <div class="situation-coverage">ICE</div>
+                        <div class="situation-effectiveness">0.82 PPP | 15% TO Rate</div>
+                    </div>
+                    
+                    <div class="situation-card" style="background: linear-gradient(135deg, #27ae60, #229954);">
+                        <div class="situation-title">🚀 Fast Break Transition</div>
+                        <div class="situation-coverage">SWITCH</div>
+                        <div class="situation-effectiveness">0.85 PPP | 12% TO Rate</div>
+                    </div>
+                    
+                    <div class="situation-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                        <div class="situation-title">🏹 Elite Shooters</div>
+                        <div class="situation-coverage">UNDER/THROUGH</div>
+                        <div class="situation-effectiveness">0.83 PPP | 8% TO Rate</div>
+                    </div>
+                    
+                    <div class="situation-card" style="background: linear-gradient(135deg, #9b59b6, #8e44ad);">
+                        <div class="situation-title">💪 Physical Mismatches</div>
+                        <div class="situation-coverage">DROP</div>
+                        <div class="situation-effectiveness">0.88 PPP | 6% TO Rate</div>
+                    </div>
+                    
+                    <div class="situation-card" style="background: linear-gradient(135deg, #1abc9c, #16a085);">
+                        <div class="situation-title">🎯 Mid-Range Specialists</div>
+                        <div class="situation-coverage">SHOW</div>
+                        <div class="situation-effectiveness">0.89 PPP | 9% TO Rate</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Game Flow Impact Analysis</div>
+                <canvas id="gameFlowChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Quarter-by-Quarter Effectiveness</div>
+                <canvas id="quarterChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="comparison" class="content-section">
+            <div class="chart-container">
+                <div class="chart-title">Comprehensive Coverage Comparison Matrix</div>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Coverage</th>
+                            <th>PPP</th>
+                            <th>TO Rate</th>
+                            <th>Usage</th>
+                            <th>Athletic Req</th>
+                            <th>IQ Req</th>
+                            <th>Best Against</th>
+                            <th>Avoid Against</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>🔄 Switch</strong></td>
+                            <td>0.87</td>
+                            <td>8.7%</td>
+                            <td>68%</td>
+                            <td>High</td>
+                            <td>High</td>
+                            <td>Elite Guards</td>
+                            <td>Size Mismatches</td>
+                        </tr>
+                        <tr>
+                            <td><strong>❄️ Ice</strong></td>
+                            <td>0.84</td>
+                            <td>12.3%</td>
+                            <td>25%</td>
+                            <td>Medium</td>
+                            <td>Elite</td>
+                            <td>Sideline P&R</td>
+                            <td>Top of Key</td>
+                        </tr>
+                        <tr>
+                            <td><strong>⚡ Hedge</strong></td>
+                            <td>0.92</td>
+                            <td>9.2%</td>
+                            <td>45%</td>
+                            <td>High</td>
+                            <td>Medium</td>
+                            <td>Non-shooters</td>
+                            <td>Elite Shooters</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🔥 Blitz</strong></td>
+                            <td>0.95</td>
+                            <td>18.5%</td>
+                            <td>15%</td>
+                            <td>Elite</td>
+                            <td>High</td>
+                            <td>Elite Scorers</td>
+                            <td>Great Passers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>⬇️ Drop</strong></td>
+                            <td>1.02</td>
+                            <td>4.1%</td>
+                            <td>35%</td>
+                            <td>Low</td>
+                            <td>Medium</td>
+                            <td>Poor Shooters</td>
+                            <td>Elite Shooters</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🎯 Show</strong></td>
+                            <td>0.89</td>
+                            <td>7.8%</td>
+                            <td>30%</td>
+                            <td>Medium</td>
+                            <td>Medium</td>
+                            <td>Balanced Offense</td>
+                            <td>Extreme Threats</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🌪️ Scramble</strong></td>
+                            <td>0.98</td>
+                            <td>14.2%</td>
+                            <td>12%</td>
+                            <td>Elite</td>
+                            <td>High</td>
+                            <td>Rhythm Offense</td>
+                            <td>Disciplined Teams</td>
+                        </tr>
+                        <tr>
+                            <td><strong>🛡️ Under</strong></td>
+                            <td>0.91</td>
+                            <td>6.3%</td>
+                            <td>22%</td>
+                            <td>High</td>
+                            <td>Medium</td>
+                            <td>Elite Shooters</td>
+                            <td>Physical Screens</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Risk vs Reward Analysis</div>
+                <canvas id="riskRewardChart"></canvas>
+            </div>
+        </div>
+        
+        <div id="advanced" class="content-section">
+            <div class="advanced-metrics">
+                <div class="metric-card" style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
+                    <div class="metric-value">2.3x</div>
+                    <div class="metric-label">Coverage Impact on Win%</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                    <div class="metric-value">±15</div>
+                    <div class="metric-label">Points/Game Swing</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #27ae60, #229954);">
+                    <div class="metric-value">0.23</div>
+                    <div class="metric-label">PPP Standard Deviation</div>
+                </div>
+                <div class="metric-card" style="background: linear-gradient(135deg, #f39c12, #e67e22);">
+                    <div class="metric-value">73%</div>
+                    <div class="metric-label">Teams Using Multiple</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Advanced Analytics Dashboard</div>
+                <canvas id="advancedChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Playoff vs Regular Season Effectiveness</div>
+                <canvas id="playoffChart"></canvas>
+            </div>
+            
+            <div class="coverage-grid">
+                <div class="coverage-card">
+                    <div class="coverage-title">🏆 Championship Teams Analysis</div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Last 5 Champions Primary Coverage:</div>
+                        <ul class="personnel-list">
+                            <li>2024: Switch-Heavy (72% usage)</li>
+                            <li>2023: Versatile Mix (Ice 35%, Switch 40%)</li>
+                            <li>2022: Switch-Dominant (78% usage)</li>
+                            <li>2021: Hedge-Heavy (52% usage)</li>
+                            <li>2020: Switch-Based (69% usage)</li>
+                        </ul>
+                        <p><strong>Trend:</strong> Moving toward switching with situational flexibility</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card">
+                    <div class="coverage-title">📊 Statistical Correlations</div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Strong Correlations (r > 0.7):</div>
+                        <ul class="personnel-list">
+                            <li>Coverage Diversity ↔ Playoff Success</li>
+                            <li>Switch % ↔ Defensive Rating</li>
+                            <li>Blitz Usage ↔ Turnover Rate</li>
+                            <li>Ice Proficiency ↔ Late Game Performance</li>
+                        </ul>
+                        <div class="personnel-title">Key Insight:</div>
+                        <p>Teams with 3+ effective coverages win 67% more games</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Enhanced tab switching with smooth transitions
+        function showTab(tabName) {
+            const sections = document.querySelectorAll('.content-section');
+            const tabs = document.querySelectorAll('.tab');
+            
+            // Fade out current section
+            const activeSection = document.querySelector('.content-section.active');
+            if (activeSection) {
+                activeSection.style.opacity = '0';
+                setTimeout(() => {
+                    activeSection.classList.remove('active');
+                    activeSection.style.opacity = '1';
+                }, 150);
+            }
+            
+            // Remove active class from tabs
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show new section with delay for smooth transition
+            setTimeout(() => {
+                document.getElementById(tabName).classList.add('active');
+                event.target.classList.add('active');
+                
+                // Initialize charts for specific tabs
+                if (tabName === 'analytics') {
+                    setTimeout(createAnalyticsCharts, 100);
+                } else if (tabName === 'personnel') {
+                    setTimeout(createPersonnelCharts, 100);
+                } else if (tabName === 'situational') {
+                    setTimeout(createSituationalCharts, 100);
+                } else if (tabName === 'comparison') {
+                    setTimeout(createComparisonCharts, 100);
+                } else if (tabName === 'advanced') {
+                    setTimeout(createAdvancedCharts, 100);
+                }
+            }, 150);
+        }
+        
+        // Enhanced chart creation functions
+        function createAnalyticsCharts() {
+            // Effectiveness Chart
+            const ctx1 = document.getElementById('effectivenessChart')?.getContext('2d');
+            if (ctx1) {
+                new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Ice', 'Switch', 'Show', 'Under', 'Hedge', 'Blitz', 'Scramble', 'Drop'],
+                        datasets: [{
+                            label: 'Points Per Possession',
+                            data: [0.84, 0.87, 0.89, 0.91, 0.92, 0.95, 0.98, 1.02],
+                            backgroundColor: [
+                                'rgba(155, 89, 182, 0.8)',
+                                'rgba(52, 152, 219, 0.8)',
+                                'rgba(22, 160, 133, 0.8)',
+                                'rgba(41, 128, 185, 0.8)',
+                                'rgba(243, 156, 18, 0.8)',
+                                'rgba(231, 76, 60, 0.8)',
+                                'rgba(142, 68, 173, 0.8)',
+                                'rgba(149, 165, 166, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(155, 89, 182, 1)',
+                                'rgba(52, 152, 219, 1)',
+                                'rgba(22, 160, 133, 1)',
+                                'rgba(41, 128, 185, 1)',
+                                'rgba(243, 156, 18, 1)',
+                                'rgba(231, 76, 60, 1)',
+                                'rgba(142, 68, 173, 1)',
+                                'rgba(149, 165, 166, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Lower PPP = Better Defense'
+                            },
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                min: 0.8,
+                                max: 1.1,
+                                title: {
+                                    display: true,
+                                    text: 'Points Per Possession Allowed'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Coverage Type'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Scatter Chart
+            const ctx2 = document.getElementById('scatterChart')?.getContext('2d');
+            if (ctx2) {
+                new Chart(ctx2, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Coverage Effectiveness vs Usage',
+                            data: [
+                                {x: 68, y: 0.87, label: 'Switch'},
+                                {x: 25, y: 0.84, label: 'Ice'},
+                                {x: 30, y: 0.89, label: 'Show & Recover'},
+                                {x: 22, y: 0.91, label: 'Under'},
+                                {x: 45, y: 0.92, label: 'Hedge'},
+                                {x: 15, y: 0.95, label: 'Blitz'},
+                                {x: 12, y: 0.98, label: 'Scramble'},
+                                {x: 35, y: 1.02, label: 'Drop'}
+                            ],
+                            backgroundColor: [
+                                'rgba(52, 152, 219, 0.7)',
+                                'rgba(155, 89, 182, 0.7)',
+                                'rgba(22, 160, 133, 0.7)',
+                                'rgba(41, 128, 185, 0.7)',
+                                'rgba(243, 156, 18, 0.7)',
+                                'rgba(231, 76, 60, 0.7)',
+                                'rgba(142, 68, 173, 0.7)',
+                                'rgba(149, 165, 166, 0.7)'
+                            ],
+                            borderColor: [
+                                'rgba(52, 152, 219, 1)',
+                                'rgba(155, 89, 182, 1)',
+                                'rgba(22, 160, 133, 1)',
+                                'rgba(41, 128, 185, 1)',
+                                'rgba(243, 156, 18, 1)',
+                                'rgba(231, 76, 60, 1)',
+                                'rgba(142, 68, 173, 1)',
+                                'rgba(149, 165, 166, 1)'
+                            ],
+                            pointRadius: 12,
+                            pointHoverRadius: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Coverage Efficiency vs League Usage'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const point = context.raw;
+                                        return point.label + ': ' + context.parsed.x + '% usage, ' + context.parsed.y + ' PPP';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Usage Rate (%)'
+                                },
+                                min: 0,
+                                max: 75
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Points Per Possession Allowed'
+                                },
+                                min: 0.8,
+                                max: 1.1
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Turnover Chart
+            const ctx3 = document.getElementById('turnoverChart')?.getContext('2d');
+            if (ctx3) {
+                new Chart(ctx3, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Blitz', 'Scramble', 'Ice', 'Hedge', 'Switch', 'Show', 'Under', 'Drop'],
+                        datasets: [{
+                            data: [18.5, 14.2, 12.3, 9.2, 8.7, 7.8, 6.3, 4.1],
+                            backgroundColor: [
+                                'rgba(231, 76, 60, 0.8)',
+                                'rgba(142, 68, 173, 0.8)',
+                                'rgba(155, 89, 182, 0.8)',
+                                'rgba(243, 156, 18, 0.8)',
+                                'rgba(52, 152, 219, 0.8)',
+                                'rgba(22, 160, 133, 0.8)',
+                                'rgba(41, 128, 185, 0.8)',
+                                'rgba(149, 165, 166, 0.8)'
+                            ],
+                            borderWidth: 3,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'right'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Turnover Generation Rate by Coverage (%)'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Timeline Chart
+            const ctx4 = document.getElementById('timelineChart')?.getContext('2d');
+            if (ctx4) {
+                new Chart(ctx4, {
+                    type: 'line',
+                    data: {
+                        labels: ['2019-20', '2020-21', '2021-22', '2022-23', '2023-24', '2024-25'],
+                        datasets: [{
+                            label: 'Switch',
+                            data: [0.92, 0.90, 0.88, 0.87, 0.86, 0.87],
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'Ice',
+                            data: [0.88, 0.86, 0.85, 0.84, 0.83, 0.84],
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'Drop',
+                            data: [0.98, 1.00, 1.01, 1.02, 1.03, 1.02],
+                            borderColor: 'rgba(149, 165, 166, 1)',
+                            backgroundColor: 'rgba(149, 165, 166, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Coverage Evolution: PPP Trends Over Time'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Points Per Possession'
+                                },
+                                min: 0.8,
+                                max: 1.1
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Shooting Chart
+            const ctx5 = document.getElementById('shootingChart')?.getContext('2d');
+            if (ctx5) {
+                new Chart(ctx5, {
+                    type: 'radar',
+                    data: {
+                        labels: ['At Rim', 'Paint', 'Mid-Range', '3PT', 'Corner 3', 'Above Break'],
+                        datasets: [{
+                            label: 'Switch',
+                            data: [58, 45, 42, 35, 33, 36],
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)'
+                        }, {
+                            label: 'Ice',
+                            data: [55, 42, 38, 34, 31, 35],
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            backgroundColor: 'rgba(155, 89, 182, 0.2)'
+                        }, {
+                            label: 'Drop',
+                            data: [62, 48, 46, 38, 37, 39],
+                            borderColor: 'rgba(149, 165, 166, 1)',
+                            backgroundColor: 'rgba(149, 165, 166, 0.2)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Opponent Shooting % by Court Zone'
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 70,
+                                ticks: {
+                                    stepSize: 10
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function createPersonnelCharts() {
+            const ctx = document.getElementById('radarChart')?.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Speed', 'Size', 'IQ', 'Communication', 'Recovery', 'Positioning'],
+                        datasets: [{
+                            label: 'Switch',
+                            data: [7, 9, 8, 7, 8, 7],
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                            pointBackgroundColor: 'rgba(52, 152, 219, 1)'
+                        }, {
+                            label: 'Ice',
+                            data: [6, 7, 9, 8, 6, 9],
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            backgroundColor: 'rgba(155, 89, 182, 0.2)',
+                            pointBackgroundColor: 'rgba(155, 89, 182, 1)'
+                        }, {
+                            label: 'Blitz',
+                            data: [9, 7, 8, 9, 9, 7],
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            backgroundColor: 'rgba(231, 76, 60, 0.2)',
+                            pointBackgroundColor: 'rgba(231, 76, 60, 1)'
+                        }, {
+                            label: 'Drop',
+                            data: [4, 8, 6, 5, 4, 8],
+                            borderColor: 'rgba(149, 165, 166, 1)',
+                            backgroundColor: 'rgba(149, 165, 166, 0.2)',
+                            pointBackgroundColor: 'rgba(149, 165, 166, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Personnel Requirements by Coverage (1-10 Scale)'
+                            }
+                        },
+                        scales: {
+                            r: {
+                                beginAtZero: true,
+                                max: 10,
+                                ticks: {
+                                    stepSize: 2
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function createSituationalCharts() {
+            const ctx1 = document.getElementById('gameFlowChart')?.getContext('2d');
+            if (ctx1) {
+                new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: ['Q1', 'Q2', 'Q3', 'Q4', 'OT'],
+                        datasets: [{
+                            label: 'Switch Usage %',
+                            data: [65, 68, 70, 72, 75],
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'Blitz Usage %',
+                            data: [10, 12, 15, 20, 28],
+                            borderColor: 'rgba(231, 76, 60, 1)',
+                            backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: 'Ice Usage %',
+                            data: [25, 20, 15, 8, 5],
+                            borderColor: 'rgba(155, 89, 182, 1)',
+                            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Coverage Usage Throughout Game'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Usage Percentage'
+                                },
+                                min: 0,
+                                max: 80
+                            }
+                        }
+                    }
+                });
+            }
+            
+            const ctx2 = document.getElementById('quarterChart')?.getContext('2d');
+            if (ctx2) {
+                new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: ['1st Quarter', '2nd Quarter', '3rd Quarter', '4th Quarter'],
+                        datasets: [{
+                            label: 'Switch PPP',
+                            data: [0.89, 0.87, 0.86, 0.85],
+                            backgroundColor: 'rgba(52, 152, 219, 0.8)'
+                        }, {
+                            label: 'Ice PPP',
+                            data: [0.86, 0.84, 0.83, 0.81],
+                            backgroundColor: 'rgba(155, 89, 182, 0.8)'
+                        }, {
+                            label: 'Blitz PPP',
+                            data: [0.98, 0.95, 0.92, 0.88],
+                            backgroundColor: 'rgba(231, 76, 60, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Coverage Effectiveness by Quarter'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Points Per Possession'
+                                },
+                                min: 0.75,
+                                max: 1.0
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function createComparisonCharts() {
+            const ctx = document.getElementById('riskRewardChart')?.getContext('2d');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Risk vs Reward Analysis',
+                            data: [
+                                {x: 3, y: 8.7, label: 'Switch', r: 15},
+                                {x: 2, y: 12.3, label: 'Ice', r: 12},
+                                {x: 5, y: 9.2, label: 'Hedge', r: 10},
+                                {x: 8, y: 18.5, label: 'Blitz', r: 18},
+                                {x: 1, y: 4.1, label: 'Drop', r: 8},
+                                {x: 4, y: 7.8, label: 'Show', r: 9},
+                                {x: 7, y: 14.2, label: 'Scramble', r: 14},
+                                {x: 4, y: 6.3, label: 'Under', r: 8}
+                            ],
+                            backgroundColor: [
+                                'rgba(52, 152, 219, 0.6)',
+                                'rgba(155, 89, 182, 0.6)',
+                                'rgba(243, 156, 18, 0.6)',
+                                'rgba(231, 76, 60, 0.6)',
+                                'rgba(149, 165, 166, 0.6)',
+                                'rgba(22, 160, 133, 0.6)',
+                                'rgba(142, 68, 173, 0.6)',
+                                'rgba(41, 128, 185, 0.6)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Risk Level vs Turnover Generation (Bubble size = Effectiveness)'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const point = context.raw;
+                                        return point.label + ': Risk=' + context.parsed.x + ', TO Rate=' + context.parsed.y + '%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Risk Level (1-10)'
+                                },
+                                min: 0,
+                                max: 10
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Turnover Generation Rate (%)'
+                                },
+                                min: 0,
+                                max: 20
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function createAdvancedCharts() {
+            const ctx1 = document.getElementById('advancedChart')?.getContext('2d');
+            if (ctx1) {
+                new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Win Rate Impact', 'Defensive Rating', 'Plus/Minus', 'Championship Correlation'],
+                        datasets: [{
+                            label: 'Switch-Heavy Teams',
+                            data: [2.3, -3.2, +4.8, 0.73],
+                            backgroundColor: 'rgba(52, 152, 219, 0.8)'
+                        }, {
+                            label: 'Versatile Coverage Teams',
+                            data: [3.1, -4.8, +6.2, 0.89],
+                            backgroundColor: 'rgba(22, 160, 133, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Advanced Team Performance Metrics'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Impact Score'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            const ctx2 = document.getElementById('playoffChart')?.getContext('2d');
+            if (ctx2) {
+                new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Switch', 'Ice', 'Hedge', 'Blitz', 'Drop', 'Show', 'Scramble', 'Under'],
+                        datasets: [{
+                            label: 'Regular Season PPP',
+                            data: [0.87, 0.84, 0.92, 0.95, 1.02, 0.89, 0.98, 0.91],
+                            backgroundColor: 'rgba(52, 152, 219, 0.6)'
+                        }, {
+                            label: 'Playoff PPP',
+                            data: [0.85, 0.81, 0.89, 0.91, 1.05, 0.87, 0.94, 0.88],
+                            backgroundColor: 'rgba(231, 76, 60, 0.6)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Regular Season vs Playoff Effectiveness'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Points Per Possession'
+                                },
+                                min: 0.75,
+                                max: 1.1
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        // Initialize charts on page load
+        window.addEventListener('load', function() {
+            // Add some interactive animations
+            const cards = document.querySelectorAll('.coverage-card');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = (index * 0.1) + 's';
+            });
+            
+            // Initialize default charts
+            setTimeout(createAnalyticsCharts, 500);
+        });
+        
+        // Add interactive hover effects
+        document.addEventListener('DOMContentLoaded', function() {
+            const heatmapCells = document.querySelectorAll('.heatmap-cell');
+            heatmapCells.forEach(cell => {
+                cell.addEventListener('click', function() {
+                    const coverage = this.textContent.split('\n')[0];
+                    alert(`${coverage} Coverage Details:\n\nClick on different coverage cards to explore specific analytics and personnel requirements.`);
+                });
+            });
+            
+            // Add coverage card interactions
+            const coverageCards = document.querySelectorAll('.coverage-card');
+            coverageCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const title = this.querySelector('.coverage-title').textContent.trim();
+                    const ppp = this.querySelector('.stat-value').textContent;
+                    console.log(`Selected: ${title} - PPP: ${ppp}`);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+                            <li>Versatile defenders (multi-position capable)</li>
+                            <li>Similar size matchups preferred</li>
+                            <li>Quick decision making and communication</li>
+                            <li>Good recovery speed</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Quick guards, elite shooters, when avoiding mismatches</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #9b59b6, #3498db);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">❄️</span>
+                        Ice/Blue Coverage
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 88%; background: linear-gradient(90deg, #9b59b6, #3498db);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.84</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">25%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">12.3%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Disciplined on-ball defenders</li>
+                            <li>High basketball IQ for positioning</li>
+                            <li>Strong help-side awareness</li>
+                            <li>Ability to force sideline drives</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Sideline P&R, late game, forcing tough shots</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #f39c12, #27ae60);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">⚡</span>
+                        Hedge & Recover
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 75%; background: linear-gradient(90deg, #f39c12, #27ae60);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.92</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">45%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">9.2%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Athletic big men with recovery speed</li>
+                            <li>Disciplined on-ball defenders</li>
+                            <li>Quick decision-making ability</li>
+                            <li>Good timing and coordination</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Non-elite shooters, moderate pace offenses</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #e74c3c, #f39c12);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">🔥</span>
+                        Blitz/Trap
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 70%; background: linear-gradient(90deg, #e74c3c, #f39c12);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.95</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">15%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">18.5%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Coordinated double-team execution</li>
+                            <li>Elite help-side defense</li>
+                            <li>High basketball IQ for rotations</li>
+                            <li>Quick hands and active feet</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Elite scorers, forcing turnovers, sideline traps</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #95a5a6, #34495e);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">⬇️</span>
+                        Drop Coverage
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 60%; background: linear-gradient(90deg, #95a5a6, #34495e);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">1.02</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">35%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">4.1%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Rim protectors with good positioning</li>
+                            <li>Defenders who can contest shots</li>
+                            <li>Less demanding athletically</li>
+                            <li>Good rebounding presence</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Poor shooters, rim protection priority</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #16a085, #27ae60);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">🎯</span>
+                        Show & Recover
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 78%; background: linear-gradient(90deg, #16a085, #27ae60);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.89</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">30%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">7.8%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
+                            <li>Quick feet and anticipation</li>
+                            <li>Ability to contest without fouling</li>
+                            <li>Good communication skills</li>
+                            <li>Balanced athletic requirements</li>
+                        </ul>
+                        <div class="personnel-title" style="margin-top: 15px;">Best Against:</div>
+                        <p style="color: #34495e; font-size: 0.9rem;">Moderate threats, balanced approach</p>
+                    </div>
+                </div>
+                
+                <div class="coverage-card" style="--card-gradient: linear-gradient(90deg, #8e44ad, #c0392b);">
+                    <div class="coverage-title">
+                        <span class="coverage-emoji">🌪️</span>
+                        Scram/Scramble
+                    </div>
+                    <div class="effectiveness-section">
+                        <div class="effectiveness-meter">
+                            <div class="effectiveness-fill" style="width: 65%; background: linear-gradient(90deg, #8e44ad, #c0392b);"></div>
+                        </div>
+                        <div class="stat-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0.98</div>
+                                <div class="stat-label">PPP</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">12%</div>
+                                <div class="stat-label">Usage</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">14.2%</div>
+                                <div class="stat-label">TO Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="personnel-section">
+                        <div class="personnel-title">Personnel Requirements:</div>
+                        <ul class="personnel-list">
